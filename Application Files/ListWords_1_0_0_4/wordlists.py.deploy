@@ -1,0 +1,190 @@
+#!/usr/bin/python
+from datetime import *
+import csv
+import random
+import itertools
+import sys
+import os
+
+##Transposition Script
+inputFile = open('listwords.csv','rU')
+filelist = list(csv.reader(inputFile))
+
+outputFile = open('input.csv','wb')
+transposed = csv.writer(outputFile, dialect='excel')
+
+outputArray = []
+for j in range(0, len(filelist)):
+    if j == 0:
+        outputArray.append(str(filelist[j])[14:-2])
+    else:
+        outputArray.append(str(filelist[j])[2:-2])
+
+transposed.writerow(outputArray)
+outputFile.close()
+
+##Main
+specChars = ["!","#","$","%","&","'","(",")","*","+",",","-",".","/",":",";","<","=",">","?","@","[","]","^","_","{","|","}","~"]##ORBIS NON PARATUS
+specCharsSeps =[".","&","%","+"]
+
+options = []
+options = list(sys.argv)
+
+##NOTE: Set to 1 for output to .csv file; O to output on-screen in shell only
+fileOutput = 0
+
+contextClues = file('input.csv', 'rU')
+reader = csv.reader(contextClues)
+
+clueList = reader.next()
+
+passWords = []
+
+for index in range(0,len(clueList)):
+    passWords.append(clueList[index])
+
+newPasswords = passWords
+
+passWordsDigits = []
+
+regChars = ["a","A","s","o","c","i","t","e","x","ate"]
+repChars = ["@","4","$","0","(","!","+","3","ks","8"]
+
+##Numeric Clues Aggregation
+for index in range(0,len(passWords)):
+    if passWords[index].isdigit():
+        passWordsDigits.append(passWords[index])
+    ## Add years since 1980
+##    for y in range(1980,int(date.today().year)):
+##        if not str(y) in passWordsDigits:
+##            passWordsDigits.append(str(y))
+##        if not str(y)[2:4] in passWordsDigits:
+##            passWordsDigits.append(str(y)[2:3])
+
+##Populate New Password Array
+for index in range(0,len(passWords)):
+    if passWords[index].isalpha():
+        ##Uppers and Caps Conversion
+        newPasswords.append(passWords[index].capitalize())
+        newPasswords.append(passWords[index].upper())
+        ##Reverse String
+        newPasswords.append(passWords[index][::-1])
+        ##Alternating Caps ~ Error: replaces multiple repeating characters
+        for s in range(0,2):
+            for h in range(s,len(str(passWords[index])),2):
+                if h==s:
+                    tempAltCaps = passWords[index].replace(str(passWords[index])[h],str(passWords[index])[h].capitalize(),1)
+                else:
+                    tempAltCaps = tempAltCaps.replace(str(tempAltCaps)[h],str(tempAltCaps)[h].capitalize(),1)
+            if not tempAltCaps in newPasswords:
+                newPasswords.append(tempAltCaps)
+
+##Special Character Replacement Block
+for index in range(0,len(newPasswords)):
+    if newPasswords[index].isalpha():
+        for i in range(len(regChars)):
+            if str(regChars[i]) in newPasswords[index]:
+                newPasswords.append(newPasswords[index].replace(str(regChars[i]),str(repChars[i])))
+                charCount = newPasswords[index].count(str(regChars[i]))
+                for w in range(1,charCount+1):
+                    tempPW = newPasswords[index].replace(str(regChars[i]),str(repChars[i]),w)
+                    if not w==1:
+                        tempPW = tempPW.replace(str(repChars[i]),str(regChars[i]),w-1)
+                        if not tempPW in newPasswords:
+                            newPasswords.append(tempPW)
+                    else:
+                        if not tempPW in newPasswords:
+                            newPasswords.append(tempPW)
+
+##Special Character Replacement Block Round 2
+for index in range(0,len(newPasswords)):
+    for i in range(len(regChars)):
+        if str(regChars[i]) in newPasswords[index]:
+            if not newPasswords[index].replace(str(regChars[i]),str(repChars[i])) in newPasswords:
+                newPasswords.append(newPasswords[index].replace(str(regChars[i]),str(repChars[i])))
+            charCount = newPasswords[index].count(str(regChars[i]))
+            for w in range(1,charCount+1):
+                tempPW = newPasswords[index].replace(str(regChars[i]),str(repChars[i]),w)
+                if not w==1:
+                    tempPW = tempPW.replace(str(repChars[i]),str(regChars[i]),w-1)
+                    if not tempPW in newPasswords:
+                        newPasswords.append(tempPW)
+                else:
+                    if not tempPW in newPasswords:
+                        newPasswords.append(tempPW)
+
+if options[1] == "True":
+    randomGenerator = True
+else:
+    randomGenerator = False
+##Special Character Seperators >DANGER!<
+if options[2] == "True":
+    insertSpecChars = True
+else:
+    insertSpecChars = False
+##Insert all Spec Characters
+allSpec = False
+##if options[3] == "True":
+##    allSpec = True
+##else:
+##    allSpec = False
+##Higher Number = More Combo Cycles
+randomizationFactor = int(options[4])
+
+##Debugging Block
+##randomGenerator = False
+##insertSpecChars = False
+##allSpec = False
+##randomizationFactor = 4
+
+##Random String Concatenation Block
+tempLength = len(newPasswords)
+if randomGenerator:
+    for z in range(tempLength*randomizationFactor):
+        randy1 = random.randint(0,tempLength-1)
+        randy2 = random.randint(0,tempLength-1)
+        if randy1 is not randy2:
+            temp = newPasswords[randy1]+newPasswords[randy2]
+            if not temp in newPasswords:
+                newPasswords.append(temp)
+            ##Special Character Seperators Injection
+            if insertSpecChars:
+                if allSpec:
+                    charList=specChars
+                else:
+                    charList=specCharsSeps
+                for index in range(0,len(charList)):
+                    temp = newPasswords[randy1]+charList[index]+newPasswords[randy2]
+                    if not temp in newPasswords:
+                        newPasswords.append(temp)
+
+##Post-Numeric Concatenation
+for x in range(0,len(newPasswords)):
+    for y in range(0,len(passWordsDigits)):
+        if not newPasswords[x].isdigit() or not newPasswords[x][len(newPasswords[x])-1].isdigit():
+            if not str(newPasswords[x]+passWordsDigits[y]) in newPasswords:
+                newPasswords.append(newPasswords[x]+passWordsDigits[y])
+            ##Special Character Seperators injection
+            if insertSpecChars:
+                if allSpec:
+                    charList=specChars
+                else:
+                    charList=specCharsSeps
+                for index in range(0,len(charList)):
+                    temp = newPasswords[x]+charList[index]+passWordsDigits[y]
+                    if not temp in newPasswords:
+                        newPasswords.append(temp)
+
+##Post-Exclamation Concatenation
+for index in range(0,len(newPasswords)):
+    newPasswords.append(newPasswords[index]+"!")
+                            
+##Output On-screen in Shell
+for item in newPasswords:
+    print item
+
+##Output to .csv file
+if fileOutput==1:
+    outputFile = open("passwords.txt",'w')##<--Set output file here
+    outputFile.writelines('\n'.join(''.join(items) for items in newPasswords))
+
